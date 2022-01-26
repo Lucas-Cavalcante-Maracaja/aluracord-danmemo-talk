@@ -93,7 +93,7 @@ export default function  GitUserPage(){
                             onSubmit={function (infosDoEvento){
                                 infosDoEvento.preventDefault();
                                 router.push({
-                                pathname:'/',
+                                pathname:router.query.from,
                                 });
                             }}
                             >

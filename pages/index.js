@@ -25,8 +25,8 @@ function Titulo(props) {
 export default function PaginaInicial() {
   const [username, setUsername] = React.useState("Lucas-Cavalcante-Maracaja");
   const [userPhoto, setUserPhoto] = React.useState(username);
-  const roteamento = useRouter();
-
+  const router = useRouter();
+  const [userExists, setUserExist] = React.useState(true);
   return (
     <>
       <Box
@@ -59,13 +59,26 @@ export default function PaginaInicial() {
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
               width: { xs: '100%', sm: '50%' }, textAlign: 'center', marginBottom: '32px',
             }}
-            onSubmit={function (infosDoEvento){
+            onSubmit={async function (infosDoEvento){
                 infosDoEvento.preventDefault();
-                //roteamento.push('/chat');
-                roteamento.push({
-                  pathname:'/git',
-                  query:{username:userPhoto}
-                });
+                let username = userPhoto;
+  
+                
+                var gitHubUrl = `https://api.github.com/users/${username}`;
+
+                const response = await fetch(gitHubUrl);
+                const jsonData = await response.json();
+                if (jsonData && jsonData.message !== "Not Found") {
+                  router.push({
+                    pathname:'/chat',
+                    query:{username:userPhoto}
+                  });
+                }else if (username !== "") {
+                    console.log('Username does not exist');
+                    setUserExist(false)
+                }
+                       
+               
               }
             }
           >
@@ -73,7 +86,21 @@ export default function PaginaInicial() {
             <Text variant="body3" styleSheet={{ marginBottom: '32px', color: appConfig.theme.colors.neutrals[300] }}>
               {appConfig.name}
             </Text>
-
+            {!userExists?
+            <Text
+              variant="body4"
+              
+              styleSheet={{
+                color: 'red',
+                backgroundColor: appConfig.theme.colors.neutrals[900],
+                padding: '3px 10px',
+                borderRadius: '1000px',
+                marginBottom:'4px'
+              }}
+            >
+              Usuário não encontrado
+            </Text>
+            :""}
             <TextField
               fullWidth
               textFieldColors={{
@@ -85,10 +112,19 @@ export default function PaginaInicial() {
                 },
               }}
               value={username}
-              onChange = {function (event){
+              onChange = {async function (event){
                 let name = event.target.value;
-                
+                setUserExist(true)
                 setUsername(name)
+
+                var gitHubUrl = `https://api.github.com/users/${name}`;
+
+                const response = await fetch(gitHubUrl);
+                const jsonData = await response.json();
+                if (!(jsonData && jsonData.message !== "Not Found") && username !== "") {
+                  console.log('Username does not exist');
+                  setUserExist(false)
+                }
 
                 if(name.length>2){
                   setUserPhoto(name);
@@ -126,13 +162,15 @@ export default function PaginaInicial() {
               minHeight: '240px',
             }}
           >
-            <Image
-              styleSheet={{
-                borderRadius: '50%',
-                marginBottom: '16px',
-              }}
-              src={`https://github.com/${userPhoto+ ".png"}`}
-            />
+            {userExists?
+              <Image
+                styleSheet={{
+                  borderRadius: '50%',
+                  marginBottom: '16px',
+                }}
+                src={`https://github.com/${userPhoto+ ".png"}`}
+              />
+            :""}
             <Text
               variant="body4"
               styleSheet={{
