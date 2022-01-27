@@ -1,5 +1,7 @@
 {
     "name": "Aluracord - Danmemo",
+    "supabase_api_key":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MTY0MzI4ODYzMywiZXhwIjoxOTU4ODY0NjMzfQ.hzHEUC9_XCyQJOGLev_TJ-9QJggv07romMoT6xpNxX0",
+    "supabase_url":"https://yqvdrhvurwvlbfjjtzxr.supabase.co" ,
     "theme": {
       "colors": {
         "primary": {

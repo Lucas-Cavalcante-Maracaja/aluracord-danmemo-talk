@@ -2,6 +2,12 @@ import { Box, Text, TextField, Image, Button } from '@skynexui/components';
 import React from 'react';
 import appConfig from '../config.json';
 import { useRouter } from 'next/router'
+import { createClient } from '@supabase/supabase-js';
+import { Rings  } from 'react-loading-icons'
+import GitUserPage from './gitUser';
+import Popover from '@mui/material/Popover';
+
+const supabaseClient = createClient(appConfig.supabase_url,appConfig.supabase_api_key);
 
 
 
@@ -10,22 +16,46 @@ export default function ChatPage() {
     const [mensagem, setMensagem] = React.useState('')
     const [listaDeMensagens, setListaDeMensagens]=React.useState([])
     const [tempMensagem, setTempMensagem] = React.useState('')
+    const [loading, setLoading] = React.useState(true)
+
     // Sua lógica vai aqui
 
     function handleNovaMensage(novaMensagem){
         const mensagem = {
-            id: listaDeMensagens.length +1,
+            // id: listaDeMensagens.length + 1,
             de: router.query.username,
-            texto: novaMensagem
-        }
-
-        setListaDeMensagens([
-            mensagem,
-            ...listaDeMensagens
-            
-        ])
-        setMensagem('')
+            texto: novaMensagem,
+          };
+      
+          supabaseClient
+            .from('mensagens')
+            .insert([
+              // Tem que ser um objeto com os MESMOS CAMPOS que você escreveu no supabase
+              mensagem
+            ])
+            .then(({ data }) => {
+                setListaDeMensagens([
+                    data[0],
+                    ...listaDeMensagens,
+                  ]);
+                  setMensagem('')
+                });
     }
+
+    React.useEffect(() => {
+        supabaseClient
+          .from('mensagens')
+          .select('*')
+          .order('created_at',{ascending:false})
+          .then(({ data }) => {
+            console.log('Dados da consulta:', data);
+            if(data!=null){
+                setListaDeMensagens(data);
+            }
+
+            setLoading(false)
+          });
+      }, []);
    
     let username = router.query.username;
     React.useEffect(() => {
@@ -46,6 +76,7 @@ export default function ChatPage() {
         };
 
 
+
     // ./Sua lógica vai aqui
     return (
         <Box
@@ -56,6 +87,9 @@ export default function ChatPage() {
                 color: appConfig.theme.colors.neutrals['000']
             }}
         >
+
+
+
             <Box
                 styleSheet={{
                     display: 'flex',
@@ -83,8 +117,11 @@ export default function ChatPage() {
                         padding: '16px',
                     }}
                 >
-
-                    <MessageList mensagens={listaDeMensagens} setListaDeMensagens={setListaDeMensagens} /> 
+                    {loading?
+                    <Rings />
+                
+                :<MessageList mensagens={listaDeMensagens} setListaDeMensagens={setListaDeMensagens} /> }
+                    
 
                     <Box
                         as="form"
@@ -124,7 +161,19 @@ export default function ChatPage() {
                         <Button
                          type='button'
                          label='Enviar'
+                         styleSheet={{
+                            border: '0',
+                            resize: 'none',
+                            borderRadius: '5px',
+                            padding: '6px 8px',
+                            marginRight: '12px',
+                            alignItems:"center",
+                            marginBottom:'10px',
+                            paddingTop:"12px",
+                            paddingBottom:"12px",
+                         }}
                          buttonColors={{
+                             
                              contrastColor: appConfig.theme.colors.neutrals["000"],
                              mainColor: appConfig.theme.colors.primary[500],
                              mainColorLight: appConfig.theme.colors.primary[400],
@@ -163,7 +212,25 @@ function Header() {
 function MessageList(props) {
     const router = useRouter();
 
-    function handleDeleteMessage(mensagemId){
+
+    const [anchorEl, setAnchorEl] = React.useState(null);
+
+    const handlePopoverOpen = (event) => {
+        setAnchorEl(event.currentTarget);
+    };
+
+    const handlePopoverClose = () => {
+        setAnchorEl(null);
+    };
+
+    const open = Boolean(anchorEl);
+
+    async function handleDeleteMessage(mensagemId){
+        await supabaseClient
+            .from('mensagens')
+            .delete()
+            .match({ id: mensagemId })
+
         let novaLista = props.mensagens.filter((message)=>{
             if(message.id != mensagemId){
                 return message
@@ -214,14 +281,16 @@ function MessageList(props) {
                                     display: 'inline-block',
                                     marginRight: '8px',
                                 }}
-                                src={`https://github.com/${router.query.username}.png`}
+                                src={`https://github.com/${mensagem.de}.png`}
+                                onMouseEnter={handlePopoverOpen}
+                                onMouseLeave={handlePopoverClose}
                             />
                             <Text tag="strong" onClick={function (infosDoEvento){
                                     infosDoEvento.preventDefault();
                     
                                     router.push({
                                     pathname:'/git',
-                                    query:{username:router.query.username, from:'/chat'}
+                                    query:{username:mensagem.de, from:'/chat'}
                                     });
                                 }}> 
                                 {mensagem.de}
@@ -246,6 +315,28 @@ function MessageList(props) {
                             </Text>
                         </Box>
                         {mensagem.texto}
+
+
+                        <Popover
+                            id="mouse-over-popover"
+                            sx={{
+                            pointerEvents: 'none',
+                            }}
+                            open={open}
+                            anchorEl={anchorEl}
+                            anchorOrigin={{
+                            vertical: 'bottom',
+                            horizontal: 'left',
+                            }}
+                            transformOrigin={{
+                            vertical: 'top',
+                            horizontal: 'left',
+                            }}
+                            onClose={handlePopoverClose}
+                            disableRestoreFocus
+                        >
+                            <GitUserPage username={mensagem.de}/>
+                        </Popover>
                     </Text>
                 )
             })}
