@@ -6,9 +6,17 @@ import { createClient } from '@supabase/supabase-js';
 import { Rings  } from 'react-loading-icons'
 import GitUserPage from './gitUser';
 import Popover from '@mui/material/Popover';
+import { ButtonSendSticker } from '../components/ButtonSendSticker';
 
-const supabaseClient = createClient(appConfig.supabase_url,appConfig.supabase_api_key);
-
+const supabaseClient = createClient(appConfig.supabase_url,process.env.NEXT_PUBLIC_SUPABASE_API_KEY);
+function escutaMensagensEmTempoReal(adicionaMensagem) {
+    return supabaseClient
+      .from('mensagens')
+      .on('INSERT', (respostaLive) => {
+        adicionaMensagem(respostaLive.new);
+      })
+      .subscribe();
+  }
 
 
 export default function ChatPage() {
@@ -34,10 +42,10 @@ export default function ChatPage() {
               mensagem
             ])
             .then(({ data }) => {
-                setListaDeMensagens([
+                /*setListaDeMensagens([
                     data[0],
                     ...listaDeMensagens,
-                  ]);
+                  ]);*/
                   setMensagem('')
                 });
     }
@@ -48,14 +56,34 @@ export default function ChatPage() {
           .select('*')
           .order('created_at',{ascending:false})
           .then(({ data }) => {
-            console.log('Dados da consulta:', data);
+            //console.log('Dados da consulta:', data);
             if(data!=null){
                 setListaDeMensagens(data);
             }
 
             setLoading(false)
           });
-      }, []);
+
+
+          const subscription = escutaMensagensEmTempoReal((novaMensagem) => {
+            console.log('Nova mensagem:', novaMensagem);
+            console.log('listaDeMensagens:', listaDeMensagens);
+            // Quero reusar um valor de referencia (objeto/array) 
+            // Passar uma função pro setState
+
+            setListaDeMensagens((valorAtualDaLista) => {
+              console.log('valorAtualDaLista:', valorAtualDaLista);
+              return [
+                novaMensagem,
+                ...valorAtualDaLista,
+              ]
+            });
+          });
+      
+          return () => {
+            subscription.unsubscribe();
+          }
+        }, []);
    
     let username = router.query.username;
     React.useEffect(() => {
@@ -184,6 +212,13 @@ export default function ChatPage() {
                             setTempMensagem('')
                          }}
                          />
+
+                        <ButtonSendSticker
+                            onStickerClick={(sticker) => {
+                                // console.log('[USANDO O COMPONENTE] Salva esse sticker no banco', sticker);
+                                handleNovaMensage(':sticker: ' + sticker);
+                            }}
+            />
                     </Box>
                 </Box>
             </Box>
@@ -314,7 +349,20 @@ function MessageList(props) {
                                 {(new Date().toLocaleDateString())}
                             </Text>
                         </Box>
-                        {mensagem.texto}
+                        {/* [Declarativo] */}
+                        {/* Condicional: {mensagem.texto.startsWith(':sticker:').toString()} */}
+                        {mensagem.texto.startsWith(':sticker:')
+                        ? (
+                            <Image src={mensagem.texto.replace(':sticker:', '')} />
+                        )
+                        : (
+                            mensagem.texto
+                        )}
+                        {/* if mensagem de texto possui stickers:
+                                    mostra a imagem
+                                    else 
+                                    mensagem.texto */}
+                        {/* {mensagem.texto} */}
 
 
                         <Popover
